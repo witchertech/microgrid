@@ -1061,11 +1061,22 @@ select.form-control {
 
 /* Demand Panel */
 .demand-panel {
-  grid-column: span 1;
+  grid-column: span 2;
+}
+
+.demand-overview {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-16);
 }
 
 .load-breakdown {
-  margin-bottom: var(--space-16);
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.demand-chart-container {
+  flex: 1;
 }
 
 .load-item {
@@ -1108,88 +1119,89 @@ select.form-control {
   background: var(--color-success);
 }
 
-/* Weather Panel */
-.weather-panel {
+/* Weather & Efficiency Combined Panel */
+.weather-efficiency-panel {
   grid-column: span 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.weather-half,
+.efficiency-half {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-half .card__header,
+.efficiency-half .card__header {
+  padding: var(--space-12);
+  border-bottom: 1px solid var(--color-card-border-inner);
+}
+
+.weather-half .card__body,
+.efficiency-half .card__body {
+  padding: var(--space-12);
+  flex: 1;
 }
 
 .weather-current {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-16);
+  gap: var(--space-8);
 }
 
 .weather-item {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-2);
   text-align: center;
-  padding: var(--space-12);
+  padding: var(--space-8);
   background: var(--color-bg-8);
-  border-radius: var(--radius-base);
+  border-radius: var(--radius-sm);
 }
 
 .weather-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-medium);
 }
 
 .weather-value {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
 }
 
-/* Efficiency Panel */
-.efficiency-panel {
-  grid-column: span 1;
-}
-
-.efficiency-metrics {
+.efficiency-half .efficiency-metrics {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-8);
 }
 
-.metric-item {
+.efficiency-half .metric-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-12);
+  padding: var(--space-8);
   background: var(--color-bg-3);
-  border-radius: var(--radius-base);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--color-card-border-inner);
 }
 
-.metric-label {
+.efficiency-half .metric-label {
   font-weight: var(--font-weight-medium);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
-.metric-value {
+.efficiency-half .metric-value {
   font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
   font-family: var(--font-family-mono);
 }
 
-.metric-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
 
-.metric-indicator.status--success {
-  background: var(--color-success);
-}
-
-.metric-indicator.status--warning {
-  background: var(--color-warning);
-}
-
-.metric-indicator.status--error {
-  background: var(--color-error);
-}
 
 /* Panel Controls */
 .panel-controls {

@@ -128,6 +128,62 @@
                         </div>
                     </div>
 
+                    <!-- Weather & System Efficiency Combined -->
+                    <div class="card dashboard-panel weather-efficiency-panel">
+                        <div class="weather-half">
+                            <div class="card__header">
+                                <h3>Weather</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="weather-current">
+                                    <div class="weather-item">
+                                        <span class="weather-label">Temperature</span>
+                                        <span class="weather-value" id="temperature">28.5°C</span>
+                                    </div>
+                                    <div class="weather-item">
+                                        <span class="weather-label">Irradiance</span>
+                                        <span class="weather-value" id="irradiance">875 W/m²</span>
+                                    </div>
+                                    <div class="weather-item">
+                                        <span class="weather-label">Wind Speed</span>
+                                        <span class="weather-value" id="weatherWindSpeed">8.2 m/s</span>
+                                    </div>
+                                    <div class="weather-item">
+                                        <span class="weather-label">Cloud Cover</span>
+                                        <span class="weather-value" id="cloudCover">15%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="efficiency-half">
+                            <div class="card__header">
+                                <h3>System Efficiency</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="efficiency-metrics">
+                                    <div class="metric-item">
+                                        <span class="metric-label">Overall</span>
+                                        <span class="metric-value" id="overallEfficiency">92.8%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Power Quality</span>
+                                        <span class="metric-value">
+                                            <span id="voltageValue">230.5V</span>
+                                        </span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">THD</span>
+                                        <span class="metric-value" id="thdValue">1.8%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Storage Util.</span>
+                                        <span class="metric-value" id="storageUtilization">87.3%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Power Flow Diagram -->
                     <div class="card dashboard-panel power-flow-panel">
                         <div class="card__header">
@@ -219,71 +275,14 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="demand-chart-container" style="height: 150px; position: relative;">
+                                <div class="demand-chart-container" style="height: 300px; position: relative;">
                                     <canvas id="demandChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Weather & Forecasting -->
-                    <div class="card dashboard-panel weather-panel">
-                        <div class="card__header">
-                            <h2>Weather & Forecasting</h2>
-                        </div>
-                        <div class="card__body">
-                            <div class="weather-current">
-                                <div class="weather-item">
-                                    <span class="weather-label">Temperature</span>
-                                    <span class="weather-value" id="temperature">28.5°C</span>
-                                </div>
-                                <div class="weather-item">
-                                    <span class="weather-label">Irradiance</span>
-                                    <span class="weather-value" id="irradiance">875 W/m²</span>
-                                </div>
-                                <div class="weather-item">
-                                    <span class="weather-label">Wind Speed</span>
-                                    <span class="weather-value" id="weatherWindSpeed">8.2 m/s</span>
-                                </div>
-                                <div class="weather-item">
-                                    <span class="weather-label">Cloud Cover</span>
-                                    <span class="weather-value" id="cloudCover">15%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- System Efficiency Metrics -->
-                    <div class="card dashboard-panel efficiency-panel">
-                        <div class="card__header">
-                            <h2>System Efficiency</h2>
-                            <div class="panel-controls">
-                                <span class="efficiency-target">Target: +15-20%</span>
-                            </div>
-                        </div>
-                        <div class="card__body">
-                            <div class="efficiency-metrics">
-                                <div class="metric-item">
-                                    <span class="metric-label">Overall Efficiency</span>
-                                    <span class="metric-value" id="overallEfficiency">92.8%</span>
-                                    <div class="metric-indicator status--success"></div>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-label">Power Quality</span>
-                                    <span class="metric-value">
-                                        <span id="voltageValue">230.5V</span> | 
-                                        <span id="thdValue">1.8% THD</span>
-                                    </span>
-                                    <div class="metric-indicator status--success"></div>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-label">Storage Utilization</span>
-                                    <span class="metric-value" id="storageUtilization">87.3%</span>
-                                    <div class="metric-indicator status--success"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 

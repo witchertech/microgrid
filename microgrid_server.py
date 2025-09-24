@@ -86,13 +86,12 @@ class MicrogridSimulator:
         if self.solar_data is None:
             return self.simulate_solar_fallback()
         
-        # Match current time with CSV timestamps (ignore date, match time only)
-        current_time = datetime.now().time()
+        # Get current time (use a sample time for demo)
+        current_time = datetime.now().replace(year=2020, month=5, day=15)
         
-        # Extract time from CSV timestamps and find closest match
-        csv_times = self.solar_data['DATE_TIME'].dt.time
-        time_diffs = [abs((datetime.combine(datetime.today(), t) - datetime.combine(datetime.today(), current_time)).total_seconds()) for t in csv_times]
-        closest_idx = time_diffs.index(min(time_diffs))
+        # Find closest time match in CSV
+        time_diff = abs(self.solar_data['DATE_TIME'] - current_time)
+        closest_idx = time_diff.idxmin()
         
         # Get data for all inverters at this time
         time_data = self.solar_data[self.solar_data['DATE_TIME'] == self.solar_data.loc[closest_idx, 'DATE_TIME']]
@@ -136,18 +135,50 @@ class MicrogridSimulator:
             "moduleTemp": round(temp + (irradiance / 1000) * 20, 1)
         }
     
+    def get_realtime_weather(self):
+        """Get real-time weather from Open-Meteo API"""
+        try:
+            url = "https://api.open-meteo.com/v1/forecast?latitude=28.6519&longitude=77.2315&daily=sunrise,sunset,daylight_duration,uv_index_max&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,rain,weather_code,cloud_cover,cloud_cover_high,cloud_cover_mid,cloud_cover_low,visibility,wind_speed_10m,wind_direction_10m,uv_index,is_day,sunshine_duration,direct_normal_irradiance,direct_normal_irradiance_instant&timezone=Asia%2FSingapore"
+            
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                current_hour = datetime.now().hour
+                
+                # Get current hour data from hourly forecast
+                hourly = data['hourly']
+                current_idx = current_hour if current_hour < len(hourly['temperature_2m']) else 0
+                
+                # Use direct normal irradiance if available
+                irradiance = hourly['direct_normal_irradiance'][current_idx] or 0
+                if irradiance == 0:
+                    time_factor = self.get_time_factor()
+                    cloud_factor = (100 - hourly['cloud_cover'][current_idx]) / 100
+                    irradiance = 1000 * time_factor * cloud_factor
+                
+                return {
+                    "temperature": round(hourly['temperature_2m'][current_idx], 1),
+                    "humidity": round(hourly['relative_humidity_2m'][current_idx], 0),
+                    "windSpeed": round(hourly['wind_speed_10m'][current_idx], 1),
+                    "irradiance": round(irradiance, 0),
+                    "cloudCover": round(hourly['cloud_cover'][current_idx], 0)
+                }
+        except Exception as e:
+            print(f"Weather API error: {e}")
+        
+        return self.simulate_weather_fallback()
+    
     def get_weather_from_csv(self):
         """Get weather data from CSV"""
         if self.solar_data is None:
             return self.simulate_weather_fallback()
         
-        # Match current time with CSV timestamps (ignore date, match time only)
-        current_time = datetime.now().time()
+        # Get current time (use a sample time for demo)
+        current_time = datetime.now().replace(year=2020, month=5, day=15)
         
-        # Extract time from CSV timestamps and find closest match
-        csv_times = self.solar_data['DATE_TIME'].dt.time
-        time_diffs = [abs((datetime.combine(datetime.today(), t) - datetime.combine(datetime.today(), current_time)).total_seconds()) for t in csv_times]
-        closest_idx = time_diffs.index(min(time_diffs))
+        # Find closest time match in CSV
+        time_diff = abs(self.solar_data['DATE_TIME'] - current_time)
+        closest_idx = time_diff.idxmin()
         
         # Get data for all inverters at this time
         time_data = self.solar_data[self.solar_data['DATE_TIME'] == self.solar_data.loc[closest_idx, 'DATE_TIME']]
@@ -408,8 +439,8 @@ class MicrogridSimulator:
     
     def generate_data(self):
         """Generate complete microgrid simulation data"""
-        # Get weather data from CSV
-        weather_data = self.get_weather_from_csv()
+        # Get real-time weather data
+        weather_data = self.get_realtime_weather()
         
         # Get solar data from CSV
         solar_data = self.get_solar_data_from_csv()
@@ -499,6 +530,11 @@ async def api_info():
 async def get_current_data():
     """Get current simulation data via REST API"""
     return simulator.generate_data()
+
+@app.get("/weather")
+async def get_weather():
+    """Get current weather data"""
+    return simulator.get_realtime_weather()
 
 if __name__ == "__main__":
     print("Starting Microgrid Simulation Server...")
