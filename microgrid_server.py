@@ -1,4 +1,4 @@
-# Create a comprehensive server-side simulation system for the microgrid data
+# -*- coding: utf-8 -*-
 import asyncio
 import json
 import random
@@ -8,27 +8,17 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-import numpy as np
-import pandas as pd
-
-# Create the FastAPI server simulation code
-server_code = '''
-import asyncio
-import json
-import random
-import time
-import math
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import uvicorn
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 
 app = FastAPI(title="Microgrid Data Simulation Server", version="1.0.0")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="."), name="static")
 
 # Add CORS middleware
 app.add_middleware(
@@ -114,12 +104,12 @@ class MicrogridSimulator:
         temp = weather_data["temperature"]
         
         # Solar panel efficiency decreases with temperature
-        temp_coefficient = -0.004  # -0.4%/°C
+        temp_coefficient = -0.004  # -0.4%/�C
         temp_loss = temp_coefficient * (temp - 25)
         efficiency = 0.20 + temp_loss  # 20% base efficiency
         
         # DC power calculation (simplified)
-        panel_area = 300  # m²
+        panel_area = 300  # m�
         dc_power = (irradiance / 1000) * panel_area * efficiency
         
         # AC power (inverter efficiency ~95%)
@@ -400,6 +390,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/")
 async def root():
+    return FileResponse("index.html")
+
+@app.get("/api")
+async def api_info():
     return {"message": "Microgrid Simulation Server is running", "endpoints": ["/ws"]}
 
 @app.get("/current-data")
@@ -412,18 +406,3 @@ if __name__ == "__main__":
     print("WebSocket endpoint: ws://localhost:8000/ws")
     print("REST endpoint: http://localhost:8000/current-data")
     uvicorn.run(app, host="0.0.0.0", port=8000)
-'''
-
-# Save the server code to a file
-with open('microgrid_server.py', 'w') as f:
-    f.write(server_code)
-
-print("✅ Server simulation code created successfully!")
-print("\nFile: microgrid_server.py")
-print("This file contains a complete FastAPI server that:")
-print("- Simulates realistic microgrid data including solar, wind, biogas generation")
-print("- Manages battery SOC with realistic charge/discharge dynamics")
-print("- Generates weather-based variations")
-print("- Creates system alerts and power quality monitoring")
-print("- Broadcasts data via WebSocket every 2 seconds")
-print("- Provides REST API endpoint for current data")
