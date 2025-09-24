@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microgrid Monitoring Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-left">
+            <h1>Microgrid Control System</h1>
+            <div class="system-status">
+                <span class="status status--success" id="connectionStatus">Connected</span>
+                <span class="uptime">Uptime: <span id="uptimeValue">99.7%</span></span>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="current-time" id="currentTime"></div>
+            <div class="emergency-stop">
+                <button class="btn btn--emergency" id="emergencyStop">Emergency Stop</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- Left Sidebar Navigation -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#" class="nav-item active" data-view="dashboard">Dashboard</a></li>
+                    <li><a href="#" class="nav-item" data-view="generation">Generation</a></li>
+                    <li><a href="#" class="nav-item" data-view="storage">Storage</a></li>
+                    <li><a href="#" class="nav-item" data-view="power-quality">Power Quality</a></li>
+                    <li><a href="#" class="nav-item" data-view="demand">Demand Response</a></li>
+                    <li><a href="#" class="nav-item" data-view="maintenance">Maintenance</a></li>
+                    <li><a href="#" class="nav-item" data-view="config">Configuration</a></li>
+                </ul>
+            </nav>
+            
+            <!-- Quick Alerts -->
+            <div class="quick-alerts">
+                <h3>Active Alerts</h3>
+                <div id="alertsList" class="alerts-list"></div>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view-content active">
+                <div class="dashboard-grid">
+                    <!-- Generation Overview Panel -->
+                    <div class="card dashboard-panel generation-panel">
+                        <div class="card__header">
+                            <h2>Generation Overview</h2>
+                            <div class="panel-controls">
+                                <span class="total-gen">Total: <span id="totalGeneration">74.0 kW</span></span>
+                            </div>
+                        </div>
+                        <div class="card__body">
+                            <div class="generation-sources">
+                                <div class="source-item">
+                                    <div class="source-header">
+                                        <span class="source-label">Solar</span>
+                                        <span class="source-efficiency" id="solarEfficiency">94.3%</span>
+                                    </div>
+                                    <div class="power-display">
+                                        <span class="dc-power">DC: <span id="solarDC">45.8 kW</span></span>
+                                        <span class="ac-power">AC: <span id="solarAC">43.2 kW</span></span>
+                                    </div>
+                                    <div class="gauge-container" style="height: 120px; position: relative;">
+                                        <canvas id="solarGauge"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="source-item">
+                                    <div class="source-header">
+                                        <span class="source-label">Wind</span>
+                                        <span class="source-efficiency" id="windEfficiency">89.1%</span>
+                                    </div>
+                                    <div class="power-display">
+                                        <span class="power">Power: <span id="windPower">12.3 kW</span></span>
+                                        <span class="wind-speed">Speed: <span id="windSpeed">8.2 m/s</span></span>
+                                    </div>
+                                    <div class="gauge-container" style="height: 120px; position: relative;">
+                                        <canvas id="windGauge"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="source-item">
+                                    <div class="source-header">
+                                        <span class="source-label">CBG/Biogas</span>
+                                        <span class="source-status status--success" id="cbgStatus">Operational</span>
+                                    </div>
+                                    <div class="power-display">
+                                        <span class="power">Power: <span id="cbgPower">18.5 kW</span></span>
+                                        <span class="efficiency">Eff: <span id="cbgEfficiency">91.7%</span></span>
+                                    </div>
+                                    <div class="gauge-container" style="height: 120px; position: relative;">
+                                        <canvas id="cbgGauge"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Battery Management Panel -->
+                    <div class="card dashboard-panel battery-panel">
+                        <div class="card__header">
+                            <h2>Battery Management System</h2>
+                            <div class="panel-controls">
+                                <span class="overall-soc">SOC: <span id="overallSOC">67%</span></span>
+                                <span class="charge-power">Charge: <span id="chargePower">8.5 kW</span></span>
+                            </div>
+                        </div>
+                        <div class="card__body">
+                            <div class="battery-overview">
+                                <div class="battery-gauge-container" style="height: 200px; position: relative;">
+                                    <canvas id="batteryGauge"></canvas>
+                                </div>
+                                <div class="battery-packs">
+                                    <div id="batteryPacksList" class="packs-grid"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Power Flow Diagram -->
+                    <div class="card dashboard-panel power-flow-panel">
+                        <div class="card__header">
+                            <h2>Power Flow Network</h2>
+                            <div class="panel-controls">
+                                <select id="flowViewSelect" class="form-control">
+                                    <option value="power">Power Flow</option>
+                                    <option value="voltage">Voltage</option>
+                                    <option value="current">Current</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card__body">
+                            <div class="power-flow-diagram" id="powerFlowDiagram">
+                                <svg width="100%" height="300" viewBox="0 0 800 300">
+                                    <!-- Generation Sources -->
+                                    <g class="generation-group">
+                                        <rect x="50" y="50" width="80" height="40" class="node solar-node" rx="5"/>
+                                        <text x="90" y="75" text-anchor="middle" class="node-label">Solar</text>
+                                        <text x="90" y="90" text-anchor="middle" class="node-value" id="solarNodeValue">43.2kW</text>
+                                        
+                                        <rect x="50" y="120" width="80" height="40" class="node wind-node" rx="5"/>
+                                        <text x="90" y="145" text-anchor="middle" class="node-label">Wind</text>
+                                        <text x="90" y="160" text-anchor="middle" class="node-value" id="windNodeValue">12.3kW</text>
+                                        
+                                        <rect x="50" y="190" width="80" height="40" class="node cbg-node" rx="5"/>
+                                        <text x="90" y="215" text-anchor="middle" class="node-label">CBG</text>
+                                        <text x="90" y="230" text-anchor="middle" class="node-value" id="cbgNodeValue">18.5kW</text>
+                                    </g>
+                                    
+                                    <!-- Battery Storage -->
+                                    <g class="storage-group">
+                                        <rect x="300" y="100" width="100" height="60" class="node battery-node" rx="5"/>
+                                        <text x="350" y="125" text-anchor="middle" class="node-label">Battery</text>
+                                        <text x="350" y="140" text-anchor="middle" class="node-value" id="batteryNodeValue">67% SOC</text>
+                                        <text x="350" y="155" text-anchor="middle" class="node-value" id="batteryPowerValue">+8.5kW</text>
+                                    </g>
+                                    
+                                    <!-- Loads -->
+                                    <g class="load-group">
+                                        <rect x="600" y="70" width="90" height="40" class="node critical-load-node" rx="5"/>
+                                        <text x="645" y="90" text-anchor="middle" class="node-label">Critical</text>
+                                        <text x="645" y="105" text-anchor="middle" class="node-value" id="criticalLoadValue">28.2kW</text>
+                                        
+                                        <rect x="600" y="140" width="90" height="40" class="node flexible-load-node" rx="5"/>
+                                        <text x="645" y="160" text-anchor="middle" class="node-label">Flexible</text>
+                                        <text x="645" y="175" text-anchor="middle" class="node-value" id="flexibleLoadValue">37.3kW</text>
+                                    </g>
+                                    
+                                    <!-- Power Flow Lines -->
+                                    <g class="flow-lines">
+                                        <!-- Generation to Battery -->
+                                        <line x1="130" y1="70" x2="300" y2="120" class="flow-line" stroke-width="3" id="genToBattery"/>
+                                        <line x1="130" y1="140" x2="300" y2="130" class="flow-line" stroke-width="2" id="windToBattery"/>
+                                        <line x1="130" y1="210" x2="300" y2="140" class="flow-line" stroke-width="2" id="cbgToBattery"/>
+                                        
+                                        <!-- Battery to Loads -->
+                                        <line x1="400" y1="120" x2="600" y2="90" class="flow-line" stroke-width="3" id="batteryToCritical"/>
+                                        <line x1="400" y1="140" x2="600" y2="160" class="flow-line" stroke-width="4" id="batteryToFlexible"/>
+                                    </g>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Demand Response Panel -->
+                    <div class="card dashboard-panel demand-panel">
+                        <div class="card__header">
+                            <h2>Demand Response</h2>
+                            <div class="panel-controls">
+                                <span class="peak-reduction">Peak Reduction: <span id="peakReduction">23.4%</span></span>
+                            </div>
+                        </div>
+                        <div class="card__body">
+                            <div class="demand-overview">
+                                <div class="load-breakdown">
+                                    <div class="load-item">
+                                        <span class="load-label">Critical Loads</span>
+                                        <span class="load-value" id="criticalLoads">28.2 kW</span>
+                                        <div class="load-bar">
+                                            <div class="load-fill critical" style="width: 43%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="load-item">
+                                        <span class="load-label">Flexible Loads</span>
+                                        <span class="load-value" id="flexibleLoads">37.3 kW</span>
+                                        <div class="load-bar">
+                                            <div class="load-fill flexible" style="width: 57%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="demand-chart-container" style="height: 150px; position: relative;">
+                                    <canvas id="demandChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weather & Forecasting -->
+                    <div class="card dashboard-panel weather-panel">
+                        <div class="card__header">
+                            <h2>Weather & Forecasting</h2>
+                        </div>
+                        <div class="card__body">
+                            <div class="weather-current">
+                                <div class="weather-item">
+                                    <span class="weather-label">Temperature</span>
+                                    <span class="weather-value" id="temperature">28.5°C</span>
+                                </div>
+                                <div class="weather-item">
+                                    <span class="weather-label">Irradiance</span>
+                                    <span class="weather-value" id="irradiance">875 W/m²</span>
+                                </div>
+                                <div class="weather-item">
+                                    <span class="weather-label">Wind Speed</span>
+                                    <span class="weather-value" id="weatherWindSpeed">8.2 m/s</span>
+                                </div>
+                                <div class="weather-item">
+                                    <span class="weather-label">Cloud Cover</span>
+                                    <span class="weather-value" id="cloudCover">15%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Efficiency Metrics -->
+                    <div class="card dashboard-panel efficiency-panel">
+                        <div class="card__header">
+                            <h2>System Efficiency</h2>
+                            <div class="panel-controls">
+                                <span class="efficiency-target">Target: +15-20%</span>
+                            </div>
+                        </div>
+                        <div class="card__body">
+                            <div class="efficiency-metrics">
+                                <div class="metric-item">
+                                    <span class="metric-label">Overall Efficiency</span>
+                                    <span class="metric-value" id="overallEfficiency">92.8%</span>
+                                    <div class="metric-indicator status--success"></div>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Power Quality</span>
+                                    <span class="metric-value">
+                                        <span id="voltageValue">230.5V</span> | 
+                                        <span id="thdValue">1.8% THD</span>
+                                    </span>
+                                    <div class="metric-indicator status--success"></div>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Storage Utilization</span>
+                                    <span class="metric-value" id="storageUtilization">87.3%</span>
+                                    <div class="metric-indicator status--success"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generation Systems Detailed View -->
+            <div id="generation-view" class="view-content">
+                <div class="card">
+                    <div class="card__header">
+                        <h2>Generation Systems Detailed Analysis</h2>
+                    </div>
+                    <div class="card__body">
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Solar Generation Analysis</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Detailed solar panel performance metrics, MPPT efficiency analysis, and weather correlation studies will be available in this section.</p>
+                                    <div class="status status--info">Module temperature optimization active</div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Wind Generation Analysis</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Wind turbine performance curves, wind speed correlation analysis, and turbine health monitoring will be displayed here.</p>
+                                    <div class="status status--success">Optimal wind conditions detected</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Storage Management Detailed View -->
+            <div id="storage-view" class="view-content">
+                <div class="card">
+                    <div class="card__header">
+                        <h2>Battery Storage Management</h2>
+                    </div>
+                    <div class="card__body">
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Battery Health Monitoring</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>State of Health (SoH) analysis, cycle count tracking, and predictive maintenance recommendations for battery packs.</p>
+                                    <div class="status status--success">All battery packs operating within normal parameters</div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Thermal Management</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Battery Temperature Management System (BTMS) optimization using thermal modeling to maintain optimal operating temperature (20-35°C).</p>
+                                    <div class="status status--info">BTMS maintaining optimal temperature range</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Power Quality Analysis View -->
+            <div id="power-quality-view" class="view-content">
+                <div class="card">
+                    <div class="card__header">
+                        <h2>Power Quality Analysis</h2>
+                    </div>
+                    <div class="card__body">
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Voltage & Frequency Monitoring</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Real-time voltage regulation within ±2% and frequency stability monitoring. THD analysis and harmonic distortion tracking.</p>
+                                    <div class="status status--success">Voltage: 230.5V (within ±2% tolerance)</div>
+                                    <div class="status status--success">THD: 1.8% (below 3% limit)</div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Grid Synchronization</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Inverter synchronization status and grid tie compliance monitoring for seamless integration.</p>
+                                    <div class="status status--success">Grid synchronization stable</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Demand Response Management View -->
+            <div id="demand-view" class="view-content">
+                <div class="card">
+                    <div class="card__header">
+                        <h2>Demand Response Management</h2>
+                    </div>
+                    <div class="card__body">
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Load Priority Management</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Automated demand response with priority-tiered load shifting and setpoint optimization for pumps, HVAC, and charging systems.</p>
+                                    <div class="status status--info">DR event scheduled for peak hours</div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Peak Shaving Analysis</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Real-time peak demand reduction tracking with target of 20-30% reduction through intelligent load management.</p>
+                                    <div class="status status--success">Peak reduction: 23.4% (within target)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Maintenance & Diagnostics View -->
+            <div id="maintenance-view" class="view-content">
+                <div class="card">
+                    <div class="card__header">
+                        <h2>Predictive Maintenance & Diagnostics</h2>
+                    </div>
+                    <div class="card__body">
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>System Health Overview</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Comprehensive system health monitoring with predictive analytics for maintenance scheduling and fault isolation.</p>
+                                    <div class="status status--success">System uptime: 99.7%</div>
+                                    <div class="status status--info">Next maintenance scheduled: 15 days</div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Digital Twin Analysis</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>Aging and failure-risk models for predictive maintenance scheduling and what-if scenario analysis.</p>
+                                    <div class="status status--warning">Battery Pack 4: Schedule maintenance check</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Configuration View -->
+            <div id="config-view" class="view-content">
+                <div class="card">
+                    <div class="card__header">
+                        <h2>System Configuration</h2>
+                    </div>
+                    <div class="card__body">
+                        <div class="dashboard-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Control Parameters</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>MPPT optimization settings, battery charge/discharge parameters, and demand response scheduling configuration.</p>
+                                    <div class="status status--info">Configuration optimized for current conditions</div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Communication Settings</h3>
+                                </div>
+                                <div class="card__body">
+                                    <p>WiFi/GSM connectivity configuration, MQTT broker settings, and data transmission parameters.</p>
+                                    <div class="status status--success">All communication channels active</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer with KPIs -->
+    <footer class="footer">
+        <div class="kpi-items">
+            <div class="kpi-item">
+                <span class="kpi-label">System Uptime</span>
+                <span class="kpi-value" id="footerUptime">99.7%</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-label">Peak Reduction</span>
+                <span class="kpi-value" id="footerPeakReduction">23.4%</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-label">Energy Balance</span>
+                <span class="kpi-value" id="energyBalance">+8.5 kW</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-label">Efficiency Gain</span>
+                <span class="kpi-value" id="efficiencyGain">+17.2%</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
