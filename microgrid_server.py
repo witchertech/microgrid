@@ -53,9 +53,7 @@ manager = ConnectionManager()
 class MicrogridSimulator:
     def __init__(self):
         self.time_offset = 0
-        self.base_irradiance = 875
         self.base_wind_speed = 8.2
-        self.base_temperature = 28.5
         self.battery_socs = [72, 68, 65, 63]  # Initial SOC for 4 battery packs
         self.system_efficiency = 92.8
         self.uptime = 99.7
@@ -64,6 +62,15 @@ class MicrogridSimulator:
         # Historical data for trends
         self.historical_data = []
         self.max_history = 50
+        
+        # Load CSV data
+        try:
+            self.solar_data = pd.read_csv('Plant_1_Generation_Data.csv')
+            self.solar_data['DATE_TIME'] = pd.to_datetime(self.solar_data['DATE_TIME'], format='%d/%m/%Y %H:%M')
+            print(f"Loaded {len(self.solar_data)} solar data records")
+        except Exception as e:
+            print(f"Error loading CSV: {e}")
+            self.solar_data = None
         
     def get_time_factor(self):
         """Get time-based factor for solar generation (0 at night, 1 at noon)"""
@@ -74,19 +81,111 @@ class MicrogridSimulator:
             return max(0, math.sin(math.pi * (hour - 6) / 12))
         return 0
     
-    def simulate_weather(self):
-        """Simulate realistic weather variations"""
-        time_factor = self.get_time_factor()
-        cloud_factor = random.uniform(0.7, 1.0)  # Cloud coverage effect
+    def get_solar_data_from_csv(self):
+        """Get solar data from CSV based on current time"""
+        if self.solar_data is None:
+            return self.simulate_solar_fallback()
         
-        irradiance = self.base_irradiance * time_factor * cloud_factor
-        irradiance += random.uniform(-50, 50)  # Add noise
-        irradiance = max(0, min(1200, irradiance))  # Clamp values
+        # Match current time with CSV timestamps (ignore date, match time only)
+        current_time = datetime.now().time()
+        
+        # Extract time from CSV timestamps and find closest match
+        csv_times = self.solar_data['DATE_TIME'].dt.time
+        time_diffs = [abs((datetime.combine(datetime.today(), t) - datetime.combine(datetime.today(), current_time)).total_seconds()) for t in csv_times]
+        closest_idx = time_diffs.index(min(time_diffs))
+        
+        # Get data for all inverters at this time
+        time_data = self.solar_data[self.solar_data['DATE_TIME'] == self.solar_data.loc[closest_idx, 'DATE_TIME']]
+        
+        # Aggregate data
+        total_dc = time_data['DC_POWER'].sum() / 1000  # Convert to kW
+        total_ac = time_data['AC_POWER'].sum() / 1000  # Convert to kW
+        avg_temp = time_data['AMBIENT_TEMPERATURE'].mean()
+        avg_module_temp = time_data['MODULE_TEMPERATURE'].mean()
+        avg_irradiation = time_data['IRRADIATION'].mean()
+        
+        efficiency = (total_ac / max(total_dc, 0.1)) * 100 if total_dc > 0 else 0
+        
+        return {
+            "dcPower": round(total_dc, 1),
+            "acPower": round(total_ac, 1),
+            "efficiency": round(efficiency, 1),
+            "irradiance": round(avg_irradiation, 0),
+            "moduleTemp": round(avg_module_temp, 1)
+        }
+    
+    def simulate_solar_fallback(self):
+        """Fallback solar simulation if CSV not available"""
+        time_factor = self.get_time_factor()
+        irradiance = 875 * time_factor + random.uniform(-50, 50)
+        irradiance = max(0, min(1200, irradiance))
+        
+        temp = 28.5 + random.uniform(-3, 3)
+        temp_coefficient = -0.004
+        temp_loss = temp_coefficient * (temp - 25)
+        efficiency = 0.20 + temp_loss
+        
+        dc_power = (irradiance / 1000) * 300 * efficiency
+        ac_power = dc_power * random.uniform(0.93, 0.97)
+        
+        return {
+            "dcPower": round(max(0, dc_power), 1),
+            "acPower": round(max(0, ac_power), 1),
+            "efficiency": round((ac_power / max(dc_power, 0.1)) * 100, 1),
+            "irradiance": round(irradiance, 0),
+            "moduleTemp": round(temp + (irradiance / 1000) * 20, 1)
+        }
+    
+    def get_weather_from_csv(self):
+        """Get weather data from CSV"""
+        if self.solar_data is None:
+            return self.simulate_weather_fallback()
+        
+        # Match current time with CSV timestamps (ignore date, match time only)
+        current_time = datetime.now().time()
+        
+        # Extract time from CSV timestamps and find closest match
+        csv_times = self.solar_data['DATE_TIME'].dt.time
+        time_diffs = [abs((datetime.combine(datetime.today(), t) - datetime.combine(datetime.today(), current_time)).total_seconds()) for t in csv_times]
+        closest_idx = time_diffs.index(min(time_diffs))
+        
+        # Get data for all inverters at this time
+        time_data = self.solar_data[self.solar_data['DATE_TIME'] == self.solar_data.loc[closest_idx, 'DATE_TIME']]
+        
+        # Get weather values from CSV
+        avg_temp = time_data['AMBIENT_TEMPERATURE'].mean()
+        avg_module_temp = time_data['MODULE_TEMPERATURE'].mean()
+        avg_irradiation = time_data['IRRADIATION'].mean()
+        
+        # Calculate cloud cover based on irradiation
+        cloud_cover = max(0, 100 - (avg_irradiation / 10))
+        
+        # Simulate wind and humidity (not in CSV)
+        wind_speed = self.base_wind_speed + random.uniform(-2, 3)
+        wind_speed = max(0, min(20, wind_speed))
+        humidity = random.uniform(50, 85)
+        
+        return {
+            "temperature": round(avg_temp, 1),
+            "humidity": round(humidity, 0),
+            "windSpeed": round(wind_speed, 1),
+            "irradiance": round(avg_irradiation, 0),
+            "cloudCover": round(cloud_cover, 0)
+        }
+    
+    def simulate_weather_fallback(self):
+        """Fallback weather simulation if CSV not available"""
+        time_factor = self.get_time_factor()
+        cloud_factor = random.uniform(0.7, 1.0)
+        
+        irradiance = 875 * time_factor * cloud_factor
+        irradiance += random.uniform(-50, 50)
+        irradiance = max(0, min(1200, irradiance))
         
         wind_speed = self.base_wind_speed + random.uniform(-2, 3)
         wind_speed = max(0, min(20, wind_speed))
         
-        temperature = self.base_temperature + random.uniform(-3, 3)
+        temperature = 28.5 + random.uniform(-3, 3)
         humidity = random.uniform(50, 85)
         cloud_cover = int((1 - cloud_factor) * 100)
         
@@ -309,11 +408,11 @@ class MicrogridSimulator:
     
     def generate_data(self):
         """Generate complete microgrid simulation data"""
-        # Simulate weather conditions
-        weather_data = self.simulate_weather()
+        # Get weather data from CSV
+        weather_data = self.get_weather_from_csv()
         
-        # Generate renewable energy sources
-        solar_data = self.simulate_solar_generation(weather_data)
+        # Get solar data from CSV
+        solar_data = self.get_solar_data_from_csv()
         wind_data = self.simulate_wind_generation(weather_data)
         cbg_data = self.simulate_cbg_generation()
         
