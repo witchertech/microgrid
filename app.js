@@ -168,22 +168,74 @@ class MicrogridDashboard {
                     data: [72.1, 73.5, 74.8, 74.2, 74.0, 74.3],
                     borderColor: '#1FB8CD',
                     backgroundColor: 'rgba(31, 184, 205, 0.1)',
-                    tension: 0.4
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: '#1FB8CD',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    fill: true
                 }, {
                     label: 'Demand',
                     data: [63.2, 64.8, 65.1, 65.5, 65.5, 65.2],
                     borderColor: '#B4413C',
                     backgroundColor: 'rgba(180, 65, 60, 0.1)',
-                    tension: 0.4
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: '#B4413C',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    fill: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
                 plugins: {
                     legend: { 
                         position: 'top',
-                        labels: { usePointStyle: true, boxWidth: 6 }
+                        labels: { 
+                            usePointStyle: true, 
+                            boxWidth: 6,
+                            padding: 15
+                        },
+                        onHover: (event, legendItem, legend) => {
+                            legend.chart.canvas.style.cursor = 'pointer';
+                        },
+                        onLeave: (event, legendItem, legend) => {
+                            legend.chart.canvas.style.cursor = 'default';
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#1FB8CD',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                            title: function(context) {
+                                return `Time: ${context[0].label}`;
+                            },
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} kW`;
+                            },
+                            afterBody: function(context) {
+                                const gen = context.find(c => c.dataset.label === 'Generation');
+                                const dem = context.find(c => c.dataset.label === 'Demand');
+                                if (gen && dem) {
+                                    const balance = gen.parsed.y - dem.parsed.y;
+                                    return [`Balance: ${balance.toFixed(1)} kW`];
+                                }
+                                return [];
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -191,13 +243,53 @@ class MicrogridDashboard {
                         beginAtZero: false,
                         min: 60,
                         max: 80,
-                        grid: { display: false }
+                        grid: { 
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' kW';
+                            }
+                        }
                     },
                     x: {
-                        grid: { display: false }
+                        grid: { 
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
                     }
+                },
+                onHover: (event, elements) => {
+                    event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const datasetLabel = element.dataset.label;
+                        const value = element.parsed.y;
+                        const time = element.label;
+                        
+                        // Show detailed info on click
+                        alert(`${datasetLabel} at ${time}: ${value.toFixed(1)} kW\n\nClick and drag to zoom, double-click to reset.`);
+                    }
+                },
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutQuart'
                 }
-            }
+            },
+            plugins: [{
+                id: 'customCanvasBackgroundColor',
+                beforeDraw: (chart, args, options) => {
+                    const {ctx} = chart;
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-over';
+                    ctx.fillStyle = options.color || '#ffffff';
+                    ctx.fillRect(0, 0, chart.width, chart.height);
+                    ctx.restore();
+                }
+            }]
         });
     }
     
@@ -382,14 +474,15 @@ class MicrogridDashboard {
             this.charts.demandChart.data.datasets[0].data.push(data.generation.totalGeneration);
             this.charts.demandChart.data.datasets[1].data.push(data.demand.totalLoad);
             
-            // Keep only last 10 data points
-            if (this.charts.demandChart.data.labels.length > 10) {
+            // Keep only last 15 data points for better interactivity
+            if (this.charts.demandChart.data.labels.length > 15) {
                 this.charts.demandChart.data.labels.shift();
                 this.charts.demandChart.data.datasets[0].data.shift();
                 this.charts.demandChart.data.datasets[1].data.shift();
             }
             
-            this.charts.demandChart.update('none');
+            // Animate the update
+            this.charts.demandChart.update('active');
         }
     }
     
